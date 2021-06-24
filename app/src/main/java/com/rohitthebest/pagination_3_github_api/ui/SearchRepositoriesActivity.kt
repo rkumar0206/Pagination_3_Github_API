@@ -5,8 +5,10 @@ import android.os.PersistableBundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -43,6 +45,11 @@ class SearchRepositoriesActivity : AppCompatActivity() {
         val query = savedInstanceState?.getString(LAST_SEARCH_QUERY) ?: DEFAULT_QUERY
         search(query)
         initSearch(query)
+
+        binding.retryButton.setOnClickListener {
+
+            adapter.retry()
+        }
     }
 
     private fun search(query: String) {
@@ -71,6 +78,37 @@ class SearchRepositoriesActivity : AppCompatActivity() {
             header = ReposLoadStateAdapter { adapter.retry() },
             footer = ReposLoadStateAdapter { adapter.retry() }
         )
+
+        adapter.addLoadStateListener { loadState ->
+
+            // show empty list
+            val isListEmpty = loadState.refresh is LoadState.NotLoading && adapter.itemCount == 0
+            showEmptyList(isListEmpty)
+
+            // Only show the list if refresh succeeds
+            binding.list.isVisible = loadState.source.refresh is LoadState.NotLoading
+
+            // Showing loading spinner during initial load or refresh
+            binding.progressBar.isVisible = loadState.source.refresh is LoadState.Loading
+
+            // Show the retry state if initial load or refresh fails.
+            binding.retryButton.isVisible = loadState.source.refresh is LoadState.Error
+
+            // Toast on any error, regardless of whether it came from RemoteMediator or PagingSource
+
+            val errorState = loadState.source.append as? LoadState.Error
+                ?: loadState.source.prepend as? LoadState.Error
+                ?: loadState.prepend as? LoadState.Error
+                ?: loadState.append as? LoadState.Error
+
+            errorState?.let {
+                Toast.makeText(
+                    this,
+                    "\uD83D\uDE28 Wooops ${it.error}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun initSearch(query: String) {
