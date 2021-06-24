@@ -1,0 +1,67 @@
+package com.rohitthebest.pagination_3_github_api.data
+
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
+import com.rohitthebest.pagination_3_github_api.NETWORK_PAGE_SIZE
+import com.rohitthebest.pagination_3_github_api.api.GithubService
+import com.rohitthebest.pagination_3_github_api.api.IN_QUALIFIER
+import com.rohitthebest.pagination_3_github_api.model.Repo
+import retrofit2.HttpException
+import java.io.IOException
+
+private const val GITHUB_STARTING_PAGE_INDEX = 1
+
+class GithubPagingSource(
+    private val githubService: GithubService,
+    private val query: String
+) : PagingSource<Int, Repo>() {
+
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Repo> {
+
+        val position = params.key ?: GITHUB_STARTING_PAGE_INDEX
+        val apiQuery = query + IN_QUALIFIER
+
+        return try {
+
+            val response = githubService.searchRepos(apiQuery, position, params.loadSize)
+            val repo = response.items
+
+            val nextKey = if (repo.isEmpty()) {
+                null
+            } else {
+
+                // initial load size = 3 * NETWORK_PAGE_SIZE
+                // ensure we're not requesting duplicating items, at the 2nd request
+                position + (params.loadSize / NETWORK_PAGE_SIZE)
+            }
+
+            LoadResult.Page(
+                repo,
+                if (position == GITHUB_STARTING_PAGE_INDEX) null else position - 1,
+                nextKey
+            )
+
+        } catch (e: IOException) {
+            LoadResult.Error(e)
+        } catch (e: HttpException) {
+            LoadResult.Error(e)
+        }
+
+    }
+
+
+    // The refresh key is used for subsequent refresh calls to PagingSource.load after the initial load
+    override fun getRefreshKey(state: PagingState<Int, Repo>): Int? {
+
+        // We need to get the previous key (or next key if previous is null) of the page
+        // that was closest to the most recently accessed index.
+        // Anchor position is the most recently accessed index
+
+        return state.anchorPosition?.let { anchorPosition ->
+
+            state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
+                ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
+        }
+    }
+
+}
