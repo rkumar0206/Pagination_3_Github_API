@@ -12,6 +12,7 @@ import androidx.paging.LoadState
 import androidx.recyclerview.widget.DividerItemDecoration
 import com.rohitthebest.pagination_3_github_api.databinding.ActivitySearchRepositoriesBinding
 import com.rohitthebest.pagination_3_github_api.ui.adapters.ReposAdapter
+import com.rohitthebest.pagination_3_github_api.ui.adapters.ReposLoadStateAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
@@ -66,7 +67,10 @@ class SearchRepositoriesActivity : AppCompatActivity() {
 
     private fun initAdapter() {
 
-        binding.list.adapter = this.adapter
+        binding.list.adapter = this.adapter.withLoadStateHeaderAndFooter(
+            header = ReposLoadStateAdapter { adapter.retry() },
+            footer = ReposLoadStateAdapter { adapter.retry() }
+        )
     }
 
     private fun initSearch(query: String) {

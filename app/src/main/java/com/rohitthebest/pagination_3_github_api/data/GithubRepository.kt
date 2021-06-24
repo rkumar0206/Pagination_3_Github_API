@@ -23,8 +23,7 @@ class GithubRepository @Inject constructor(
         return Pager(
             config = PagingConfig(
                 pageSize = NETWORK_PAGE_SIZE,
-                enablePlaceholders = false,
-                maxSize = 100
+                enablePlaceholders = false
             ),
             pagingSourceFactory = { GithubPagingSource(githubService, query) }
         ).flow
