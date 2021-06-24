@@ -8,6 +8,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
@@ -36,6 +37,8 @@ class SearchRepositoriesActivity : AppCompatActivity() {
 
         binding = ActivitySearchRepositoriesBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 
         // add dividers between RecyclerView's row items
         val decorations = DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
