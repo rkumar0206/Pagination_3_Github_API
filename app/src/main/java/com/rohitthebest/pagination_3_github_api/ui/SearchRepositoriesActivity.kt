@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.DividerItemDecoration
 import com.rohitthebest.pagination_3_github_api.databinding.ActivitySearchRepositoriesBinding
 import com.rohitthebest.pagination_3_github_api.ui.adapters.ReposAdapter
@@ -77,10 +78,19 @@ class SearchRepositoriesActivity : AppCompatActivity() {
 
     private fun initAdapter() {
 
-        binding.list.adapter = this.adapter.withLoadStateHeaderAndFooter(
-            header = ReposLoadStateAdapter { adapter.retry() },
-            footer = ReposLoadStateAdapter { adapter.retry() }
+        val header = ReposLoadStateAdapter { adapter.retry() }
+        val footer = ReposLoadStateAdapter { adapter.retry() }
+
+        binding.list.adapter = ConcatAdapter(
+            header,
+            adapter,
+            footer
         )
+
+        /* binding.list.adapter = this.adapter.withLoadStateHeaderAndFooter(
+             header = ReposLoadStateAdapter { adapter.retry() },
+             footer = ReposLoadStateAdapter { adapter.retry() }
+         )*/
 
         adapter.addLoadStateListener { loadState ->
 
@@ -88,14 +98,24 @@ class SearchRepositoriesActivity : AppCompatActivity() {
             val isListEmpty = loadState.refresh is LoadState.NotLoading && adapter.itemCount == 0
             showEmptyList(isListEmpty)
 
-            // Only show the list if refresh succeeds
-            binding.list.isVisible = loadState.source.refresh is LoadState.NotLoading
+            // Show a retry header if there was an error refreshing, and items were previously
+            // cached OR default to the default prepend state
+            header.loadState = loadState.mediator
+                ?.refresh
+                ?.takeIf { it is LoadState.Error && adapter.itemCount > 0 }
+                ?: loadState.prepend
+            footer.loadState = loadState.append
+
+            // Only show the list if refresh succeeds, either from the the local db or the remote.
+            binding.list.isVisible = loadState.mediator?.refresh is LoadState.NotLoading ||
+                    loadState.source.refresh is LoadState.NotLoading
 
             // Showing loading spinner during initial load or refresh
-            binding.progressBar.isVisible = loadState.source.refresh is LoadState.Loading
+            binding.progressBar.isVisible = loadState.mediator?.refresh is LoadState.Loading
 
-            // Show the retry state if initial load or refresh fails.
-            binding.retryButton.isVisible = loadState.source.refresh is LoadState.Error
+            // Show the retry state if initial load or refresh fails and there are no items.
+            binding.retryButton.isVisible =
+                loadState.mediator?.refresh is LoadState.Error && adapter.itemCount == 0
 
             // Toast on any error, regardless of whether it came from RemoteMediator or PagingSource
 
